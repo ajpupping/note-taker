@@ -2,13 +2,19 @@ const express = require('express');
 const notes = express.Router();
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
 
 
 // GET route
 
 notes.get('/', (req, res) => {
-    fs.readFile('db/db.json', 'utf8', (err, data) => {
-        if (err) throw err;
+    const filePath = path.join(__dirname, '../db/db.json');
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
+        if (err) {
+            console.error(err);
+            return res.status(500).send('Error, notes could not be retrieved.');
+        }
         res.json(JSON.parse(data));
     });
 });
@@ -18,28 +24,32 @@ notes.get('/', (req, res) => {
 
 notes.post('/', (req, res) => {
     const { title, text } = req.body;
-    if (title && text) {
-        const newNote = {
-            title,
-            text,
+    if (!title || !text) {
+        return res.json('Please add both a title and text to your note.');
+    } 
+    
+    const newNote = {
             id: uuidv4(),
+            title,
+            text, 
         };
 
-        fs.readFile('db/db.json', 'utf8', (err, data) => {
+    const filePath = path.join(__dirname, '../db/db.json');
+
+    fs.readFile(filePath, 'utf8', (err, data) => {
             if (err) throw err;
 
         const notes = JSON.parse(data);
 
         notes.push(newNote);
 
-        fs.writeFile('db/db.json', JSON.stringify(notes, null, 2), (err) => {
-            if (err) throw err;
+        fs.writeFile(filePath, JSON.stringify(notes, null, 2), (err) => {
+            if (err) {
+                return res.status(500).json('Error, note could not be saved.');
+            }
             res.json(newNote);
         });
     });
-} else {
-    res.json('Please add both a title and text to your note.');
-}
 });
 
 // Delete route
